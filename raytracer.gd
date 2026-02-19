@@ -5,27 +5,67 @@ const ItemType = preload("res://item_type.gd").ItemType
 const Map = preload("res://map.gd")
 const MapGenerator = preload("res://map_generator.gd")
 const Enemy = preload("res://enemy.gd")
+const Player = preload("res://player.gd")
+const TextureRenderer = preload("res://texture_renderer.gd")
+const DamageType = preload("res://damage_type.gd").DamageType
 
 const SCREEN_WIDTH = 1152
 const SCREEN_HEIGHT = 648
+const FPS = 60
 
+		
 # teleports behind you
-class Grubbler extends Enemy.EnemyData:
-	pass
+class GrubblerData extends Enemy.EnemyData:
 
-# Simple dungeon layout (1 = wall, 0 = empty)
-#const world_map_data = [
-	#[1,1,1,1,1,1,1,1,1,1],
-	#[1,0,0,0,0,0,0,0,0,1],
-	#[1,0,1,0,1,0,1,1,0,1],
-	#[1,0,1,0,0,0,0,1,0,1],
-	#[1,0,1,1,1,1,0,1,0,1],
-	#[1,0,0,0,0,1,0,0,0,1],
-	#[1,1,1,1,0,1,1,1,0,1],
-	#[1,0,0,1,0,0,0,1,0,1],
-	#[1,0,0,0,0,1,0,0,0,1],
-	#[1,1,1,1,1,1,1,1,1,1],
-#]
+	signal released_locked_in_place
+
+	const ATTACK_LOADUP_THRESHOLD = 2
+	const SPAWN_CHANCE_PER_SECOND = 0.05
+	const DAMAGE = 10
+	static var is_attacking = false
+
+	enum State {INIT, HIDING, ATTACK}
+
+	var attack_loadup = 0
+	var state: State = State.INIT
+
+	func update(delta: float, enemy: Enemy, player: Player, map: Map) -> void:
+		if state == State.INIT:
+			enemy.hide()
+			state = State.HIDING
+
+		if state == State.HIDING:
+			if is_attacking: # another grubbler is already attacking
+				return
+
+			var behind_player: Vector2 = (player.position - player.dir.normalized()).round()
+			var can_spawn = map.get_tile(behind_player) == MapGenerator.Tile.EMPTY
+			if SPAWN_CHANCE_PER_SECOND / FPS > randf():
+				state = State.ATTACK
+				enemy.position = behind_player
+				player.lock_in_place()
+				released_locked_in_place.connect(player.release_locked_in_place)
+				enemy.show()
+
+		if state == State.ATTACK:
+			if is_loading_up_attack():
+				attack_loadup += delta
+			else:
+				attack_loadup = 0
+				player.take_damage(DAMAGE, DamageType.PHYSICAL)
+				# TODO: play attack sound
+
+	func is_loading_up_attack():
+		return state == State.ATTACK and attack_loadup < ATTACK_LOADUP_THRESHOLD
+
+	func render(renderer: TextureRenderer, enemy: Enemy):
+		super.render(renderer, enemy)
+		if is_loading_up_attack():
+			pass
+			# TODO: display little attack icon
+
+	func die() -> void:
+		released_locked_in_place.emit()
 
 var exitted = false
 var map: Map
@@ -34,13 +74,6 @@ var shader: ShaderMaterial = self.material
 var item_bobbing = Vector2(0, 0)
 const COLLECTION_DISTANCE = 0.5
 
-class Player:
-	const radius = 0.25
-	var position = Vector2(1.5, 1.5)
-	var dir = Vector2(1, 0)
-	var move_speed = 2.0
-	var rot_speed = 1.5
-
 var player: Player
 var camera_plane = Vector2(0, 0.66) # FOV ~66°
 
@@ -48,9 +81,16 @@ var z_buffer = []
 var item_textures = {}
 var wall_textures = {}
 var background_texture
+var enemies: Array[Enemy] = []
+var texture_renderer: TextureRenderer
 
 func _ready():
 	player = Player.new()
+
+	texture_renderer = TextureRenderer.new(draw_strip_texture, player)
+
+	var grubbler_texture = load("res://sprites/wall.png")
+	enemies.append(Enemy.new(Vector2(1, 1), GrubblerData.new(grubbler_texture)))
 
 	var height = randi_range(10, 20)
 	var width = randi_range(10, 20)
@@ -84,6 +124,9 @@ func _process(delta):
 	#print(map.get_tile(behind_player) == 0)
 
 	handle_input(delta)
+	for enemy in enemies:
+		enemy.update(delta, player, map)
+
 	queue_redraw()
 
 
@@ -97,6 +140,9 @@ func is_wall(x: int, y: int) -> bool:
 	return false
 
 func try_to_move_to(velocity: Vector2):
+	if player.locked_in_place:
+		return
+
 	var new_pos = player.position + velocity
 
 	# Check X separately
@@ -303,3 +349,6 @@ func _draw():
 		# Collect item
 		if sprite_pos.length() < COLLECTION_DISTANCE:
 			collect_item(item)
+
+	for enemy in enemies:
+		enemy.render(texture_renderer)

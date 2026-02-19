@@ -1,4 +1,5 @@
 extends Node
+class_name Map
 
 var width
 var height
