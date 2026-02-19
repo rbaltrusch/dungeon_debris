@@ -1,18 +1,12 @@
-extends Area2D
+var collected = false
+var position
+var type
 
-@export var item_name: String
-@export var value: int = 1
-var item_data: Resource
+const ItemType = preload("res://item_type.gd").ItemType
 
-@onready var sprite: Sprite2D = $Sprite2D
+func _init(position: Vector2, type: ItemType) -> void:
+	self.position = position
+	self.type = type
 
-
-func _ready():
-	body_entered.connect(_on_body_entered)
-	if item_data and item_data.sprite:
-		sprite.texture = item_data.sprite
-
-func _on_body_entered(body):
-	if body.has_method("collect_item"):
-		body.collect_item(self)
-		queue_free()
+func collect():
+	collected = true

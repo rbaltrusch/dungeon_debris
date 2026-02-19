@@ -1,16 +1,7 @@
 extends Node2D
 
-const Item = preload("res://_old_item.gd")
+const Item = preload("res://item.gd")
 const ItemType = preload("res://item_type.gd").ItemType
-
-#const ItemScene = preload("res://item.tscn")
-#const HealthPotion = preload("res://items/HealthPotion.tres")
-#
-#func spawn_health_potion(position: Vector2):
-	#var item = ItemScene.instantiate()
-	#item.position = position
-	#item.item_data = HealthPotion
-	#add_child(item)
 
 const SCREEN_WIDTH = 1152
 const SCREEN_HEIGHT = 648
@@ -52,7 +43,6 @@ const world_map_data = [
 var map = Map.new(world_map_data)
 
 
-
 var items = [
 	Item.new(Vector2(3, 1.5), ItemType.LARGE_HEALTH_POTION),
 	Item.new(Vector2(5, 1.5), ItemType.SMALL_HEALTH_POTION),
@@ -80,11 +70,11 @@ func _ready():
 	background_texture = load("res://sprites/background.png")
 	item_textures[ItemType.LARGE_HEALTH_POTION] = load("res://sprites/health_potion.png")
 	item_textures[ItemType.SMALL_HEALTH_POTION] = load("res://sprites/small_health_potion.png")
+	item_textures[ItemType.GOLD] = load("res://sprites/gold.png")
+	item_textures[ItemType.KEY] = load("res://sprites/key.png")
 
 	wall_textures[1] = load("res://sprites/wall2.png")
-	#item_textures[ItemType.GOLD] = load("res://sprites/gold.png")
-	#item_textures[ItemType.POTION] = load("res://sprites/potion.png")
-	#item_textures[ItemType.KEY] = load("res://sprites/key.png")
+
 
 #func is_wall(x: int, y: int) -> bool:
 	#if x < 0 || y < 0 || x >= MAP_WIDTH || y >= MAP_HEIGHT || world_map[y][x] > 0:
@@ -111,9 +101,6 @@ func try_to_move_to(velocity: Vector2):
 	# Check Y separately
 	if not is_wall(player.position.x, new_pos.y):
 		player.position.y = new_pos.y
-
-#func _ready():
-	#spawn_health_potion(Vector2(300, 300))
 
 func _process(delta):
 	var time = 1.0 * Time.get_ticks_msec() / 1000
@@ -264,7 +251,7 @@ func _draw():
 			wall_x = player.position.x + perp_wall_dist * ray_dir.x
 
 		wall_x -= floor(wall_x)
-		var texture_index = world_map[int(map_pos.y)][int(map_pos.x)]
+		var texture_index = map.get_tile(round(map_pos.y), round(map_pos.x))
 		if not texture_index: # empty
 			continue
 		var tex = wall_textures[texture_index]
@@ -288,24 +275,13 @@ func _draw():
 		var draw_end = line_height / 2 + SCREEN_HEIGHT / 2
 		var color = Color("#40242f")
 		var modulator_color = Color(color * 0.5, 1) if side == 1 else color
-		#if side == 1:
-			#color = Color(color * 0.7, 1) # simple shading
+
 		draw_texture_rect_region(
 			tex,
 			Rect2(x, draw_start, 1, draw_end - draw_start),
 			Rect2(tex_x, 0, 1, tex_height),
 			modulator_color
 		)
-#
-		#var color = Color("#40242f")
-		#if side == 1:
-			#color = Color(color * 0.7, 1) # simple shading
-#
-		#draw_line(
-			#Vector2(x, draw_start),
-			#Vector2(x, draw_end),
-			#color
-		#)
 
 	items.sort_custom(func(a, b):
 		return player.position.distance_to(b.position) < player.position.distance_to(a.position)
