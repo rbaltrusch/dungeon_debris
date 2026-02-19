@@ -1,0 +1,6 @@
+enum ItemType {
+	GOLD,
+	LARGE_HEALTH_POTION,
+	SMALL_HEALTH_POTION,
+	KEY
+}

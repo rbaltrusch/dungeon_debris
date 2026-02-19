@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="HealthPotionData" load_steps=4 format=3 uid="uid://bf736ue2i08ip"]
+
+[ext_resource type="Script" uid="uid://ci5i3r7nahnv" path="res://items/health_potion.gd" id="1_s06gi"]
+
+[sub_resource type="Gradient" id="Gradient_s06gi"]
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_d2588"]
+gradient = SubResource("Gradient_s06gi")
+
+[resource]
+script = ExtResource("1_s06gi")
+heal_amount = 20
+name = ""
+sprite = SubResource("GradientTexture2D_d2588")
+metadata/_custom_type_script = "uid://ci5i3r7nahnv"
