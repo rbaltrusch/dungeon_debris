@@ -2,63 +2,46 @@ extends Node2D
 
 const Item = preload("res://item.gd")
 const ItemType = preload("res://item_type.gd").ItemType
+const Map = preload("res://map.gd")
+const MapGenerator = preload("res://map_generator.gd")
+const Enemy = preload("res://enemy.gd")
 
 const SCREEN_WIDTH = 1152
 const SCREEN_HEIGHT = 648
 
-class Map:
-	var width
-	var height
-	var data
-	const EMPTY_TILE = -1
-
-	# Array[Array[int]]
-	func _init(map_data: Array):
-		data = map_data
-		height = data.size()
-		width = map_data[0].size() if height else 0
-
-	func get_tile(x: int, y: int) -> int:
-		if x < 0 || y < 0 || x >= width || y >= height:
-			return EMPTY_TILE
-		return data[y][x]
-
-	func is_empty_tile(tile: int) -> bool:
-		return tile == EMPTY_TILE
+# teleports behind you
+class Grubbler extends Enemy.EnemyData:
+	pass
 
 # Simple dungeon layout (1 = wall, 0 = empty)
-const world_map_data = [
-	[1,1,1,1,1,1,1,1,1,1],
-	[1,0,0,0,0,0,0,0,0,1],
-	[1,0,1,0,1,0,1,1,0,1],
-	[1,0,1,0,0,0,0,1,0,1],
-	[1,0,1,1,1,1,0,1,0,1],
-	[1,0,0,0,0,1,0,0,0,1],
-	[1,1,1,1,0,1,1,1,0,1],
-	[1,0,0,1,0,0,0,1,0,1],
-	[1,0,0,0,0,1,0,0,0,1],
-	[1,1,1,1,1,1,1,1,1,1],
-]
+#const world_map_data = [
+	#[1,1,1,1,1,1,1,1,1,1],
+	#[1,0,0,0,0,0,0,0,0,1],
+	#[1,0,1,0,1,0,1,1,0,1],
+	#[1,0,1,0,0,0,0,1,0,1],
+	#[1,0,1,1,1,1,0,1,0,1],
+	#[1,0,0,0,0,1,0,0,0,1],
+	#[1,1,1,1,0,1,1,1,0,1],
+	#[1,0,0,1,0,0,0,1,0,1],
+	#[1,0,0,0,0,1,0,0,0,1],
+	#[1,1,1,1,1,1,1,1,1,1],
+#]
 
-var map = Map.new(world_map_data)
-
-
-var items = [
-	Item.new(Vector2(3, 1.5), ItemType.LARGE_HEALTH_POTION),
-	Item.new(Vector2(5, 1.5), ItemType.SMALL_HEALTH_POTION),
-]
-var item_bobbing = Vector2(0, 0)
-
+var exitted = false
+var map: Map
+var items: Array
 var shader: ShaderMaterial = self.material
+var item_bobbing = Vector2(0, 0)
+const COLLECTION_DISTANCE = 0.5
 
 class Player:
-	const radius = 0.45
+	const radius = 0.25
 	var position = Vector2(1.5, 1.5)
 	var dir = Vector2(1, 0)
 	var move_speed = 2.0
 	var rot_speed = 1.5
 
-var player = Player.new()
+var player: Player
 var camera_plane = Vector2(0, 0.66) # FOV ~66°
 
 var z_buffer = []
@@ -67,27 +50,49 @@ var wall_textures = {}
 var background_texture
 
 func _ready():
+	player = Player.new()
+
+	var height = randi_range(10, 20)
+	var width = randi_range(10, 20)
+	var map_data = MapGenerator.new().generate(width, height)
+	map = Map.new(map_data)
+	map.debug_print()
+
+	items = [
+		Item.new(Vector2(3, 1.5), ItemType.LARGE_HEALTH_POTION),
+		Item.new(Vector2(5, 1.5), ItemType.SMALL_HEALTH_POTION),
+	]
+
 	background_texture = load("res://sprites/background.png")
 	item_textures[ItemType.LARGE_HEALTH_POTION] = load("res://sprites/health_potion.png")
 	item_textures[ItemType.SMALL_HEALTH_POTION] = load("res://sprites/small_health_potion.png")
 	item_textures[ItemType.GOLD] = load("res://sprites/gold.png")
 	item_textures[ItemType.KEY] = load("res://sprites/key.png")
 
-	wall_textures[1] = load("res://sprites/wall2.png")
+	wall_textures[MapGenerator.Tile.WALL] = load("res://sprites/wall2.png")
+	wall_textures[MapGenerator.Tile.DOOR] = load("res://sprites/wall.png")
 
+func _process(delta):
+	var time = 1.0 * Time.get_ticks_msec() / 1000
+	shader.set_shader_parameter("u_time", time)
 
-#func is_wall(x: int, y: int) -> bool:
-	#if x < 0 || y < 0 || x >= MAP_WIDTH || y >= MAP_HEIGHT || world_map[y][x] > 0:
-		#print("wall", x, y)
-		#return true
-	#return false
+	var bob = 0.025 * sin(2 * PI * 0.35 * time)
+	item_bobbing = Vector2(bob, bob)
+
+	#print(player.position)
+	#var behind_player: Vector2 = (player.position - player.dir.normalized()).round()
+	#print(map.get_tile(behind_player) == 0)
+
+	handle_input(delta)
+	queue_redraw()
+
 
 func is_wall(x: int, y: int) -> bool:
 	for angle in range(0, 360, 45):
 		var dir = Vector2.RIGHT.rotated(deg_to_rad(angle))
-		x = round(x + dir.x * player.radius)
-		y = round(y + dir.y * player.radius)
-		if map.get_tile(x, y) > 0:
+		var offset = dir.x * player.radius
+		var pos = (Vector2(x, y) + Vector2(offset, offset)).round()
+		if map.get_tile(pos) > 0:
 			return true
 	return false
 
@@ -97,38 +102,22 @@ func try_to_move_to(velocity: Vector2):
 	# Check X separately
 	if not is_wall(new_pos.x, player.position.y):
 		player.position.x = new_pos.x
-	
+
 	# Check Y separately
 	if not is_wall(player.position.x, new_pos.y):
 		player.position.y = new_pos.y
 
-func _process(delta):
-	var time = 1.0 * Time.get_ticks_msec() / 1000
-	shader.set_shader_parameter("u_time", time)
-
-	var bob = 0.025 * sin(2 * PI * 0.35 * time)
-	item_bobbing = Vector2(bob, bob)
-
-	print(player.position)
-
-	handle_input(delta)
-	queue_redraw()
-
 func handle_input(delta):
 	if Input.is_action_pressed("forward"):
-		print("up")
 		try_to_move_to(player.dir * player.move_speed * delta)
 
 	if Input.is_action_pressed("backward"):
-		print("down")
 		try_to_move_to(-player.dir * player.move_speed * delta)
 
 	if Input.is_action_pressed("left"):
-		print("left")
 		rotate_player(-player.rot_speed * delta)
 
 	if Input.is_action_pressed("right"):
-		print("right")
 		rotate_player(player.rot_speed * delta)
 
 	if Input.is_action_just_pressed("attack"):
@@ -140,6 +129,13 @@ func handle_input(delta):
 func rotate_player(angle):
 	player.dir = player.dir.rotated(angle)
 	camera_plane = camera_plane.rotated(angle)
+
+func exit_dungeon():
+	if exitted:
+		return
+	exitted = true
+	print("exitted")
+	queue_free()
 
 func draw_strip_texture(sprite_pos: Vector2, texture: Texture2D):
 
@@ -223,6 +219,7 @@ func _draw():
 		var side = 0
 
 		# DDA
+		var counter = 0
 		while not hit:
 			if side_dist.x < side_dist.y:
 				side_dist.x += delta_dist.x
@@ -233,8 +230,13 @@ func _draw():
 				map_pos.y += step.y
 				side = 1
 
-			if map.get_tile(round(map_pos.y), round(map_pos.x)) > 0:
+			if map.get_tile(map_pos.round()) > 0:
 				hit = true
+			counter += 1
+			if counter % 1000 == 0:
+				print(counter)
+			if counter > 10_000:
+				break
 
 		var perp_wall_dist
 		if side == 0:
@@ -251,9 +253,13 @@ func _draw():
 			wall_x = player.position.x + perp_wall_dist * ray_dir.x
 
 		wall_x -= floor(wall_x)
-		var texture_index = map.get_tile(round(map_pos.y), round(map_pos.x))
+		var texture_index = map.get_tile(map_pos.round())
 		if not texture_index: # empty
 			continue
+
+		if texture_index == MapGenerator.Tile.DOOR && perp_wall_dist < COLLECTION_DISTANCE:
+			exit_dungeon.call_deferred()
+
 		var tex = wall_textures[texture_index]
 		if not tex:
 			print("error looking up texture: ", texture_index)
@@ -295,5 +301,5 @@ func _draw():
 		draw_strip_texture(sprite_pos, texture)
 
 		# Collect item
-		if sprite_pos.length() < 0.5:
+		if sprite_pos.length() < COLLECTION_DISTANCE:
 			collect_item(item)
