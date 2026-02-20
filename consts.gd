@@ -1,0 +1,3 @@
+const SCREEN_WIDTH = 1152
+const SCREEN_HEIGHT = 648
+const FPS = 60

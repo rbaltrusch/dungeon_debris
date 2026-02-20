@@ -1,0 +1,60 @@
+[gd_scene load_steps=16 format=3 uid="uid://2ty0lugv2qtk"]
+
+[ext_resource type="Script" uid="uid://c3qphb1mjyl4j" path="res://raytracer.gd" id="1_6elmv"]
+[ext_resource type="AudioStream" uid="uid://cu86h05uxm4wr" path="res://bgmusic.mp3" id="2_qu0b2"]
+[ext_resource type="Shader" uid="uid://c2hmm6i1obdu7" path="res://dungeon.gdshader" id="3_noicg"]
+[ext_resource type="AudioStream" uid="uid://3idfsgqe31k6" path="res://sounds/hit.mp3" id="4_my81p"]
+[ext_resource type="AudioStream" uid="uid://cx11g0cap48d4" path="res://sounds/slam.mp3" id="5_vol8w"]
+[ext_resource type="AudioStream" uid="uid://bdocul60rtt8v" path="res://sounds/potionpickup1.mp3" id="6_tgur7"]
+[ext_resource type="AudioStream" uid="uid://qmtkfhnqgnqi" path="res://sounds/potionpickup2.mp3" id="7_kun6q"]
+[ext_resource type="AudioStream" uid="uid://bxhagol0wl1wv" path="res://sounds/potionpickup3.mp3" id="8_7wc3a"]
+[ext_resource type="AudioStream" uid="uid://4w6a8yotildp" path="res://sounds/potionpickup4.mp3" id="9_uag5o"]
+[ext_resource type="AudioStream" uid="uid://csg0vj0n0j18e" path="res://sounds/keypickup.mp3" id="10_kun6q"]
+[ext_resource type="AudioStream" uid="uid://sv2c4teid6db" path="res://sounds/grubblerattack.mp3" id="11_7wc3a"]
+[ext_resource type="AudioStream" uid="uid://bxo0ipwwab031" path="res://sounds/small_slam.mp3" id="12_uag5o"]
+[ext_resource type="AudioStream" uid="uid://hrq3asaniydt" path="res://sounds/grubbler_hunting2.mp3" id="13_jqckn"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_noicg"]
+shader = ExtResource("3_noicg")
+shader_parameter/u_time = 0.0
+
+[sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_jqckn"]
+streams_count = 4
+stream_0/stream = ExtResource("6_tgur7")
+stream_1/stream = ExtResource("7_kun6q")
+stream_2/stream = ExtResource("8_7wc3a")
+stream_3/stream = ExtResource("9_uag5o")
+
+[node name="Dungeon" type="Node2D"]
+material = SubResource("ShaderMaterial_noicg")
+script = ExtResource("1_6elmv")
+
+[node name="MusicPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("2_qu0b2")
+volume_db = -0.282
+autoplay = true
+parameters/looping = true
+
+[node name="HitSound" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("4_my81p")
+
+[node name="SlamSound" type="AudioStreamPlayer" parent="."]
+
+[node name="Slam" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("5_vol8w")
+autoplay = true
+
+[node name="PotionPickup" type="AudioStreamPlayer" parent="."]
+stream = SubResource("AudioStreamRandomizer_jqckn")
+
+[node name="KeyPickup" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("10_kun6q")
+
+[node name="GrubblerAttack" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("11_7wc3a")
+
+[node name="SmallSlam" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("12_uag5o")
+
+[node name="GrubblerHunt" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("13_jqckn")

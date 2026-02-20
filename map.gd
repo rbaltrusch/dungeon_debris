@@ -13,8 +13,8 @@ func _init(map_data: Array):
 	width = map_data[0].size() if height else 0
 
 func get_tile(position: Vector2) -> int:
-	var x = position.x
-	var y = position.y
+	var x = round(position.x)
+	var y = round(position.y)
 	if x < 0 || y < 0 || x >= width || y >= height:
 		return OUT_OF_BOUNDS
 	return data[y][x]

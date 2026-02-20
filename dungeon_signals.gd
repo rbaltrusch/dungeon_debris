@@ -1,0 +1,6 @@
+class_name DungeonSignals
+
+signal took_damage
+signal blocked_damage
+signal increased_block
+signal exitted_dungeon
