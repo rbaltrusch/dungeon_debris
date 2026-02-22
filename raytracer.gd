@@ -24,6 +24,9 @@ signal item_used(item)
 signal player_healed(hp)
 signal equipped_left_hand_item(item)
 signal equipped_shield(shield)
+signal full_strangeness_reached
+signal increased_strangeness(strangeness)
+signal asked_to_display_help
 
 const Item = preload("res://item.gd")
 const ItemType = preload("res://item_type.gd").ItemType
@@ -36,10 +39,12 @@ const TextureRenderer = preload("res://texture_renderer.gd")
 const DamageType = preload("res://damage_type.gd").DamageType
 const Constants = preload("res://consts.gd")
 const GrubblerData = preload("res://grubbler.gd")
+const ZombieData = preload("res://zombie.gd")
 const DungeonSignals = preload("res://dungeon_signals.gd")
 const Shield = preload("res://shield.gd")
 const Weapon = preload("res://weapon.gd")
 const Key = preload("res://key.gd")
+const PathFinder = preload("res://pathfinder.gd")
 
 const SCREEN_WIDTH = Constants.SCREEN_WIDTH
 const SCREEN_HEIGHT = Constants.SCREEN_HEIGHT
@@ -50,6 +55,8 @@ var exitting = false
 var exitted = false
 
 var map: Map
+var pathfinder: PathFinder
+
 var items: Array
 var shader: ShaderMaterial = self.material
 var item_bobbing = Vector2(0, 0)
@@ -67,6 +74,7 @@ var texture_renderer: TextureRenderer
 
 @onready var block_strip_timer = $BlockStripTimer
 @onready var spawn_timer = $SpawnTimer
+@onready var zombie_spawn_timer = $ZombieSpawnTimer
 
 var can_exit = false
 var can_warn = true
@@ -80,9 +88,13 @@ var can_scroll = true
 @onready var use_sword_sound = $UseSword
 
 @onready var torch_timer = $TorchTimer
-var torch_level = 70
+var torch_level = 50
 
+var banged_against_door = 0
 var strangeness = 0
+const FULL_STRANGENESS = 50
+var dungeon_number = 1
+var min_dungeon_size = 5
 
 func _ready():
 	player = Player.new()
@@ -110,10 +122,16 @@ func _ready():
 	player.picked_up_weapon.connect(add_child)
 	dealt_damage.connect(func(damage): player.set_attack_on_cooldown())
 	dealt_damage.connect(func(damage): use_sword_sound.play)
-	player.equip_shield.call_deferred(Shield.new(8, 3.5, ItemType.WOODEN_SHIELD))
+	player.equip_shield.call_deferred(Shield.new(6, 3.5, ItemType.WOODEN_SHIELD))
+	player.pickup_left_hand_item(create_torch(Vector2(0, 0)))
+	player.pickup_left_hand_item(create_potion(Vector2(0, 0), false))
 	player.pickup_left_hand_item.call_deferred(Weapon.new(10, 1, 2.5, ItemType.DAGGER))
 
 	exitted_dungeon.connect($DoorUnlock.play)
+	exitted_dungeon.connect(generate_dungeon)
+	exitted_dungeon.connect(func(): dungeon_number += 1)
+	exitted_dungeon.connect(func(): min_dungeon_size += 2)
+	full_strangeness_reached.connect($Win.play)
 
 	block_strip_timer.timeout.connect(func():
 		player.reduce_block(1)
@@ -121,46 +139,24 @@ func _ready():
 			block_strip_timer.start()
 	)
 	player.increased_block.connect(func(block): block_strip_timer.start())
-	spawn_timer.timeout.connect(func(): spawn_enemy(create_grubbler()); spawn_timer.start())
+	spawn_timer.timeout.connect(func(): spawn_enemy(create_grubbler(Vector2())); spawn_timer.start())
+	zombie_spawn_timer.timeout.connect(func(): spawn_enemy(create_zombie(get_random_empty_tile())); zombie_spawn_timer.start())
 	scroll_timer.timeout.connect(func(): can_scroll = true)
 	failed_to_exit_dungeon_timer.timeout.connect(func(): can_warn = true)
 	torch_timer.timeout.connect(func():
 		increase_torch_level(-1)
 		torch_timer.start()
-		print("torch_level", torch_level)
+		#print("torch_level", torch_level)
 	)
 
 	texture_renderer = TextureRenderer.new(draw_strip_texture, player)
-	for i in 3:
-		spawn_enemy(create_grubbler())
-
-	var height = randi_range(10, 20)
-	var width = randi_range(10, 20)
-	var map_data = MapGenerator.new().generate(width, height)
-	map = Map.new(map_data)
-	map.debug_print()
-	rotate_player(player.determine_angle_looking_into_open_corridor(map))
-
-	var large_potion = Item.new(Vector2(3, 1.5), ItemType.LARGE_HEALTH_POTION, func(item): player.heal(50))
-	large_potion.was_collected.connect($PotionPickup.play)
-	large_potion.was_used.connect($UsePotion.play)
-	var small_potion = Item.new(Vector2(5, 1.5), ItemType.SMALL_HEALTH_POTION, func(item): player.heal(20))
-	small_potion.was_collected.connect($PotionPickup.play)
-	small_potion.was_used.connect($UsePotion.play)
-	var key = Key.new(Vector2(6, 1.5), ItemType.KEY, start_exit_dungeon)
-	key.was_collected.connect($KeyPickup.play)
-	key.tried_to_use.connect($KeyUse.play)
-	var torch = Item.new(Vector2(4, 1.5), ItemType.TORCH, func(item): increase_torch_level(25))
-	var items_ = [large_potion, small_potion, key, torch]
-	for item in items_:
-		spawn_item(item)
-
+	generate_dungeon()
 	exit_timer.timeout.connect(exit_dungeon)
 
 	background_texture = load("res://sprites/background.png")
 	item_textures[ItemType.LARGE_HEALTH_POTION] = load("res://sprites/health_potion.png")
 	item_textures[ItemType.SMALL_HEALTH_POTION] = load("res://sprites/small_health_potion.png")
-	item_textures[ItemType.GOLD] = load("res://sprites/gold.png")
+	item_textures[ItemType.STRANGE_DEBRIS] = load("res://sprites/strange_debris_small.png")
 	item_textures[ItemType.KEY] = load("res://sprites/key.png")
 	item_textures[ItemType.TORCH] = load("res://sprites/torch.png")
 
@@ -168,7 +164,87 @@ func _ready():
 	wall_textures[MapGenerator.Tile.DOOR] = load("res://sprites/door.png")
 	wall_textures[MapGenerator.Tile.TORCH_WALL] = load("res://sprites/wall3.png")
 
-func create_grubbler() -> Enemy:
+func generate_dungeon() -> void:
+	var height = randi_range(min_dungeon_size, min_dungeon_size + 10)
+	var width = randi_range(min_dungeon_size, min_dungeon_size + 10)
+	var map_data = MapGenerator.new().generate(width, height)
+	map = Map.new(map_data)
+	pathfinder = PathFinder.new(map)
+	map.debug_print()
+	rotate_player(player.determine_angle_looking_into_open_corridor(map))
+	spawn_items(map)
+	spawn_enemies(map)
+	fadeout = 0
+	exitting = false
+	exitted = false
+	increase_torch_level(25)
+	$UseTorch.play()
+	player.position = Vector2(1.5, 1.5)
+
+func spawn_enemies(map: Map) -> void:
+	spawn_entity_of_type(150, create_grubbler, spawn_enemy)
+	spawn_entity_of_type(85, create_zombie, spawn_enemy)
+	
+func spawn_items(map: Map) -> void:
+	spawn_entity_of_type(25, create_torch, spawn_item)
+	spawn_entity_of_type(200, create_key, spawn_item, 1)
+	spawn_entity_of_type(80, create_potion, spawn_item)
+	spawn_entity_of_type(25, create_strange_debris, spawn_item)
+
+func spawn_entity_of_type(rarity_per_type: int, item_factory: Callable, item_consumer: Callable, min_count: int = 0) -> void:
+	var tiles = map.width * map.height
+	const factor = 1  # rarities were too low...
+	var amount = ceil(1.0 * factor * tiles / rarity_per_type)
+	var spawned = 0
+	while spawned <= min_count:
+		for i in amount:
+			var position = Vector2(randi_range(1, map.width - 2), randi_range(1, map.height - 2))
+			if map.get_tile(position) != MapGenerator.Tile.EMPTY:
+				continue
+			#print("item spawned at: ", position + Vector2(0, 0.5))
+			var item = item_factory.call(position + Vector2(0.5, 0.5))
+			item_consumer.call(item)
+			spawned += 1
+			if spawned > amount and spawned > min_count:
+				break
+	print("spawned in total: ", spawned, ". rarity: ", rarity_per_type)
+
+func get_random_empty_tile() -> Vector2:
+	while true:
+		var position = Vector2(randi_range(1, map.width - 2), randi_range(1, map.height - 2))
+		if map.get_tile(position) == MapGenerator.Tile.EMPTY:
+			return position
+	return Vector2()
+
+func create_strange_debris(position: Vector2) -> Item:
+	var item = Item.new(position, ItemType.STRANGE_DEBRIS, func(item): increase_strangeness(1))
+	item.was_collected.connect($StrangeDebrisPickup.play)
+	item.was_collected.connect(func(item): item.use())
+	return item
+	
+func create_key(position: Vector2) -> Key:
+	var key = Key.new(position, ItemType.KEY, start_exit_dungeon)
+	key.was_collected.connect($KeyPickup.play)
+	key.tried_to_use.connect($KeyUse.play)
+	return key
+
+func create_torch(position: Vector2) -> Item:
+	var torch = Item.new(position, ItemType.TORCH, func(item): increase_torch_level(25))
+	torch.was_collected.connect($PickupTorch.play)
+	torch.was_used.connect($UseTorch.play)
+	return torch
+
+func create_potion(position: Vector2, big = null) -> Item:
+	# only 30% chance it will be a big potion. overriden if big parameter is given
+	var is_big = (big == null and 0.3 > randf()) or big
+	var heal_amount = 50 if is_big else 20
+	var type = ItemType.LARGE_HEALTH_POTION if is_big else ItemType.SMALL_HEALTH_POTION
+	var potion = Item.new(position, type, func(item): player.heal(heal_amount))
+	potion.was_collected.connect($PotionPickup.play)
+	potion.was_used.connect($UsePotion.play)
+	return potion
+
+func create_grubbler(position: Vector2) -> Enemy:
 	var grubbler_texture = load("res://sprites/grubbler.png")
 	var dagger_texture = load("res://sprites/dagger.png")
 	var grubbler_data = GrubblerData.new(grubbler_texture, dagger_texture)
@@ -177,12 +253,20 @@ func create_grubbler() -> Enemy:
 	grubbler_data.started_attack.connect($GrubblerHunt.stop)
 	grubbler_data.started_attack.connect($GrubblerAttack.play)
 	#grubbler_data.state = GrubblerData.State.HUNTING
-	return Enemy.new(Vector2(1, 1), grubbler_data)
+	return Enemy.new(position, grubbler_data)
+
+func create_zombie(position: Vector2) -> Enemy:
+	var texture = load("res://sprites/zombie.png")
+	var zombie_data = ZombieData.new(texture, func(pos): return pathfinder.get_path(pos, player.position))
+	zombie_data.just_attacked.connect($SmallSlam.play)
+	return Enemy.new(position, zombie_data)
 
 func spawn_enemy(enemy: Enemy) -> void:
+	print("spawned enemy")
 	enemies.append(enemy)
 	enemy.died.connect(func(): enemy_killed.emit(enemy))
 	enemy.died.connect($EnemyDeath.play)
+	enemy.died.connect(increase_strangeness.bind(1))
 	enemy.took_damage.connect(dealt_damage.emit)
 
 func spawn_item(item: Item) -> void:
@@ -190,6 +274,14 @@ func spawn_item(item: Item) -> void:
 	item.was_collected.connect(item_collected.emit)
 	item.was_collected.connect(player.pickup_left_hand_item)
 	item.was_used.connect(item_used.emit)
+
+func increase_strangeness(extra_strangeness: int) -> void:
+	if not extra_strangeness:
+		return
+	strangeness += extra_strangeness
+	if strangeness >= FULL_STRANGENESS:
+		full_strangeness_reached.emit()
+	increased_strangeness.emit(extra_strangeness)
 
 func increase_torch_level(extra_torch: int):
 	torch_level = clamp(torch_level + extra_torch, 10, 100)
@@ -217,6 +309,10 @@ func process_player_attack(damage: float):
 			print("out of cone")
 			continue
 
+		if not enemy.visible:
+			print("invisible enemy")
+			continue
+
 		#if not has_line_of_sight(enemy.position):
 			#print("no line of sight to enemy")
 			#continue
@@ -228,6 +324,11 @@ func process_player_attack(damage: float):
 
 	if best_target:
 		best_target.take_damage(player.weapon.damage, DamageType.PHYSICAL)
+	elif can_exit:  # banging against door without target
+		banged_against_door += 1
+		if banged_against_door >= 3:
+			player.take_damage(25, DamageType.PHYSICAL)
+			start_exit_dungeon()
 
 #func has_line_of_sight(target_pos: Vector2) -> bool:
 	#var ray_dir = (target_pos - player.position).normalized()
@@ -251,7 +352,7 @@ func _process(delta):
 	if exitting:
 		fadeout = clamp(fadeout + delta, 0, 1)
 	elif not player.alive:
-		fadeout = clamp(fadeout + delta / 2.5, 0, 1)  # slower fadeout
+		fadeout = clamp(fadeout + delta / 2.5, 0, 0.9)  # slower fadeout
 
 	shader.set_shader_parameter("u_time", time)
 	shader.set_shader_parameter("u_fadeout_time", fadeout)
@@ -304,6 +405,8 @@ func try_to_move_to(velocity: Vector2):
 
 func handle_input(delta):
 	if not player.alive:
+		if Input.is_action_just_pressed("restart"):
+			get_tree().reload_current_scene()
 		return
 
 	if Input.is_action_pressed("forward"):
@@ -332,6 +435,10 @@ func handle_input(delta):
 		lock_scroll()
 		player.equip_previous_left_hand_item()
 
+	if Input.is_action_just_pressed("display_help"):
+		print("help")
+		asked_to_display_help.emit()
+
 func lock_scroll():
 	can_scroll = false
 	scroll_timer.start()
@@ -340,7 +447,7 @@ func rotate_player(angle):
 	player.dir = player.dir.rotated(angle)
 	camera_plane = camera_plane.rotated(angle)
 
-func start_exit_dungeon(item: Item):
+func start_exit_dungeon(item: Item = null):
 	if not can_exit:
 		failed_to_exit_dungeon_no_door.emit()
 		return
@@ -351,12 +458,18 @@ func start_exit_dungeon(item: Item):
 	exitting = true
 	exit_timer.start()
 	exitted_dungeon.emit()
-	item.was_used.emit(item)
+
+	if item:
+		item.used = true
+		item.was_used.emit(item)
 
 func exit_dungeon():
+	if exitted:
+		return
+	increase_strangeness(dungeon_number)
 	exitted = true
 	print("exitted")
-	queue_free()
+	#queue_free()
 
 # returns the rect of actual screen coordinates drawn
 func draw_strip_texture(sprite_pos: Vector2, texture: Texture2D, scale: float = 1.0) -> Rect2:
@@ -492,7 +605,7 @@ func _draw():
 				failure.emit()
 				failed_to_exit_dungeon_timer.start()
 
-		var tex = wall_textures[texture_index]
+		var tex = wall_textures[texture_index] if texture_index != -1 else null
 		if not tex:
 			print("error looking up texture: ", texture_index)
 			continue

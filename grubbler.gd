@@ -44,10 +44,10 @@ func update(delta: float, enemy: Enemy, player: Player, map: Map) -> void:
 		enemy.hide()
 		state = State.HIDING
 
-	if state == State.HIDING:
-		if is_attacking: # another grubbler is already attacking
-			return
+	if is_attacking and not state == State.ATTACK: # another grubbler is already attacking
+		return
 
+	if state == State.HIDING:
 		if SPAWN_CHANCE_PER_SECOND / FPS > randf():
 			state = State.HUNTING
 			started_hunting.emit()
@@ -70,6 +70,7 @@ func update(delta: float, enemy: Enemy, player: Player, map: Map) -> void:
 			hunt_loadup += delta
 	
 	if state == State.ATTACK:
+		is_attacking = true
 		if is_loading_up_attack():
 			attack_loadup += delta
 		else:
@@ -87,6 +88,8 @@ func render(renderer: TextureRenderer, enemy: Enemy):
 	if is_loading_up_attack():
 		var scale = 0.1 + 0.25 * sin(PI / 2 * attack_loadup / ATTACK_LOADUP_THRESHOLD)
 		var rendered_rect = renderer.render(dagger_texture, dagger_position + bobbing, scale)
+		# TODO: render attack damage
 
 func die() -> void:
+	is_attacking = false
 	released_locked_in_place.emit()

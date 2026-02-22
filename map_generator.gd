@@ -8,7 +8,7 @@ enum Tile {
 
 }
 
-func is_wall(tile: Tile):
+static func is_wall(tile: Tile):
 	return tile == Tile.WALL or tile == Tile.TORCH_WALL
 
 const TORCH_CHANCE = 0.05
@@ -98,8 +98,8 @@ func _carve_maze(pos: Vector2i, map: Array, w: int, h: int) -> void:
 # -------------------------------------------------
 
 func _try_place_room(map: Array, w: int, h: int) -> Rect2i:
-	var rw = rng.randi_range(3, 7)
-	var rh = rng.randi_range(3, 7)
+	var rw = min(w - 1, rng.randi_range(3, 7))
+	var rh = min(h - 1, rng.randi_range(3, 7))
 
 	if rw % 2 == 0: rw += 1
 	if rh % 2 == 0: rh += 1
@@ -112,7 +112,7 @@ func _try_place_room(map: Array, w: int, h: int) -> Rect2i:
 	# Check overlap
 	for y in range(rect.position.y - 1, rect.end.y + 1):
 		for x in range(rect.position.x - 1, rect.end.x + 1):
-			if map[y][x] == Tile.EMPTY:
+			if y >= h or x >= w or map[y][x] == Tile.EMPTY:
 				return NULL_ROOM
 
 	# Carve room
@@ -166,7 +166,7 @@ func _add_loops(map: Array, w: int, h: int, chance: float) -> void:
 
 func _add_doors(map: Array, w: int, h: int) -> void:
 	var exit_count = clamp((w * h) / 200, 1, 4)
-	var min_coord = 5
+	var min_coord = min(5, w - 1, h - 1)
 
 	for i in range(exit_count):
 		var placed = false

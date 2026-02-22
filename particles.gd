@@ -13,7 +13,7 @@ const OFFSET = Vector2(0, 10)
 
 @onready var ray_tracer = $"../SubViewport/Dungeon"
 
-func spawn_floating_text(text: String, position: Vector2, size: int):
+func spawn_floating_text(text: String, position: Vector2, size: int, duration: float = 1.0):
 	var label = Label.new()
 	label.text = text
 	label.position = position
@@ -21,10 +21,17 @@ func spawn_floating_text(text: String, position: Vector2, size: int):
 	label.add_theme_font_override("font", font)
 
 	var tween = create_tween()
-	const duration = 1
 	tween.tween_property(label, "position:y", position.y - 100, duration * 2)
 	tween.parallel().tween_property(label, "modulate:a", 0.0, duration)
 	tween.finished.connect(label.queue_free)
+	return label
+
+func spawn_text(text: String, position: Vector2, size: int):
+	var label = Label.new()
+	label.text = text
+	label.position = position
+	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_font_override("font", font)
 	return label
 
 func _ready():
@@ -68,6 +75,7 @@ func _ready():
 		add_child(
 			spawn_floating_text("Died...", MIDDLE, 30)
 		)
+		add_child(spawn_text("Press R to restart", MIDDLE + OFFSET * 2, 30))
 	)
 
 	ray_tracer.failed_to_attack_due_to_no_weapon.connect(func():
@@ -125,6 +133,8 @@ func _ready():
 	)
 
 	ray_tracer.item_used.connect(func(item: Item):
+		if item.type == Item.ItemType.ItemType.STRANGE_DEBRIS:
+			return
 		add_child(
 			spawn_floating_text("Used %s..." % item.get_item_name(), TOP_LEFT, 30)
 		)
@@ -133,5 +143,30 @@ func _ready():
 	ray_tracer.exitted_dungeon.connect(func():
 		add_child(
 			spawn_floating_text("Exited...", MIDDLE, 30)
+		)
+	)
+
+	ray_tracer.full_strangeness_reached.connect(func():
+		add_child(
+			spawn_floating_text("Victory? You reached a strange land with a strange mind...", Vector2(50, 500), 40, 30.0)
+		)
+	)
+
+	ray_tracer.increased_strangeness.connect(func(strangeness):
+		add_child(
+			spawn_floating_text("Strangeness %s" % strangeness, TOP_LEFT, 30)
+		)
+	)
+
+	ray_tracer.asked_to_display_help.connect(func():
+		print("help")
+		add_child(
+			spawn_floating_text("Left mouse button: use weapon / item", MIDDLE, 30, 7.5)
+		)
+		add_child(
+			spawn_floating_text("Right mouse button: use shield", MIDDLE + OFFSET * 2, 30, 7.5)
+		)
+		add_child(
+			spawn_floating_text("Mouse wheel scroll: change weapon / item", MIDDLE + OFFSET * 4, 30, 7.5)
 		)
 	)

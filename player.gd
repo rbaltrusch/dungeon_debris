@@ -28,14 +28,16 @@ const Shield = preload("res://shield.gd")
 const radius = 0.25
 var position = Vector2(1.5, 1.5)
 var dir = Vector2(1, 0)
+
+var locked_in_place = false
+var alive = true
+
 var move_speed = 2.0
 var rot_speed = 2.5
 var hp = 100
 var max_hp = 100
 var block = 0
 var armour = 0
-var locked_in_place = false
-var alive = true
 
 var shield: Shield # nullable
 var weapon: Weapon # nullable
@@ -95,6 +97,9 @@ func release_locked_in_place() -> void:
 
 # Weapon or usable item
 func pickup_left_hand_item(item: Variant) -> void:
+	if item is Item and item.used:
+		return
+
 	if item is Weapon and self.weapon:
 		left_hand_items = left_hand_items.filter(func(x): return x != self.weapon)
 		self.weapon.drop()

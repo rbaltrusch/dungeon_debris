@@ -1,7 +1,7 @@
 class_name ItemData
 
 enum ItemType {
-	GOLD,
+	STRANGE_DEBRIS,
 	LARGE_HEALTH_POTION,
 	SMALL_HEALTH_POTION,
 	KEY,
@@ -19,7 +19,7 @@ class ItemDescription:
 		self.description = description
 
 static var item_descriptions: Dictionary[ItemType, ItemDescription] = {
-	ItemType.GOLD: ItemDescription.new("Strange treasure", "A bizarre artefact"),
+	ItemType.STRANGE_DEBRIS: ItemDescription.new("Strange debris", "A bizarre artefact"),
 	ItemType.LARGE_HEALTH_POTION: ItemDescription.new("Large health potion", "A large health potion"),
 	ItemType.SMALL_HEALTH_POTION: ItemDescription.new("Small health potion", "A small health potion"),
 	ItemType.KEY: ItemDescription.new("Key", "A door key"),
