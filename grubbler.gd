@@ -29,6 +29,7 @@ var hunt_loadup = 0
 var attack_loadup = 0
 var state: State = State.INIT
 var bobbing = Vector2()
+var dagger_position = Vector2()
 
 func _init(texture: Texture2D, dagger_texture: Texture2D):
 	super._init(texture)
@@ -60,7 +61,9 @@ func update(delta: float, enemy: Enemy, player: Player, map: Map) -> void:
 			started_attack.emit()
 			state = State.ATTACK
 			enemy.position = behind_player + Vector2(0.5, 0.5)
+			dagger_position = player.position - player.dir.normalized() * 0.5
 			player.lock_in_place()
+			enemy.died.connect(self.die)
 			released_locked_in_place.connect(player.release_locked_in_place)
 			enemy.show()
 		else:
@@ -83,7 +86,7 @@ func render(renderer: TextureRenderer, enemy: Enemy):
 	renderer.render(texture, enemy.position + bobbing)
 	if is_loading_up_attack():
 		var scale = 0.1 + 0.25 * sin(PI / 2 * attack_loadup / ATTACK_LOADUP_THRESHOLD)
-		var rendered_rect = renderer.render(dagger_texture, enemy.position + bobbing, scale)
+		var rendered_rect = renderer.render(dagger_texture, dagger_position + bobbing, scale)
 
 func die() -> void:
 	released_locked_in_place.emit()

@@ -26,7 +26,7 @@ var visible: bool = true
 var position: Vector2
 var data: EnemyData
 
-var hp = 100
+var hp = 50
 var block = 0
 var armour = 0
 var alive = true
@@ -54,7 +54,7 @@ func take_damage(damage: float, type: DamageType):
 	block = max(0, block - actual_damage)
 	var remaining_damage = max(0, actual_damage - block)
 	hp = max(0, hp - remaining_damage)
-	print("damaged. remaining hp: ", hp)
+	print("enemy damaged. remaining hp: ", hp)
 	if hp == 0:
 		die()
 	elif remaining_damage > 0:

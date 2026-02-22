@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://2ty0lugv2qtk"]
+[gd_scene load_steps=24 format=3 uid="uid://2ty0lugv2qtk"]
 
 [ext_resource type="Script" uid="uid://c3qphb1mjyl4j" path="res://raytracer.gd" id="1_6elmv"]
 [ext_resource type="AudioStream" uid="uid://cu86h05uxm4wr" path="res://bgmusic.mp3" id="2_qu0b2"]
@@ -15,10 +15,17 @@
 [ext_resource type="AudioStream" uid="uid://hrq3asaniydt" path="res://sounds/grubbler_hunting2.mp3" id="13_jqckn"]
 [ext_resource type="AudioStream" uid="uid://dsbantakv5b28" path="res://sounds/death_roar1.mp3" id="14_av2vf"]
 [ext_resource type="AudioStream" uid="uid://c5ha5sxdcuxm0" path="res://sounds/death_roar2.mp3" id="15_6gydx"]
+[ext_resource type="AudioStream" uid="uid://3scu22d82wnx" path="res://sounds/use_potion.mp3" id="16_6gydx"]
+[ext_resource type="AudioStream" uid="uid://dkyjso406gjhw" path="res://sounds/key_use.mp3" id="17_77ujo"]
+[ext_resource type="AudioStream" uid="uid://d3gvppj1ubixt" path="res://sounds/door_unlock.mp3" id="18_v3ata"]
+[ext_resource type="AudioStream" uid="uid://cg7mjcipnuvhh" path="res://sounds/use_sword.mp3" id="19_v3ata"]
+[ext_resource type="AudioStream" uid="uid://k5p20mqbepq7" path="res://sounds/block_increased.mp3" id="20_uj8uw"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_noicg"]
 shader = ExtResource("3_noicg")
 shader_parameter/u_time = 0.0
+shader_parameter/u_fadeout_time = 0.0
+shader_parameter/u_torch_level = 1.0
 
 [sub_resource type="AudioStreamRandomizer" id="AudioStreamRandomizer_jqckn"]
 streams_count = 4
@@ -45,7 +52,9 @@ parameters/looping = true
 [node name="HitSound" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("4_my81p")
 
-[node name="SlamSound" type="AudioStreamPlayer" parent="."]
+[node name="BlockedAttack" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("12_uag5o")
+volume_db = 4.601
 
 [node name="Slam" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("5_vol8w")
@@ -70,3 +79,42 @@ stream = ExtResource("13_jqckn")
 
 [node name="EnemyDeath" type="AudioStreamPlayer" parent="."]
 stream = SubResource("AudioStreamRandomizer_85cul")
+
+[node name="UsePotion" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("16_6gydx")
+
+[node name="KeyUse" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("17_77ujo")
+volume_db = -6.0
+
+[node name="DoorUnlock" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("18_v3ata")
+
+[node name="UseSword" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("19_v3ata")
+volume_db = -5.0
+pitch_scale = 0.9
+
+[node name="BlockIncreased" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("20_uj8uw")
+volume_db = -2.0
+pitch_scale = 2.0
+
+[node name="BlockStripTimer" type="Timer" parent="."]
+process_callback = 0
+wait_time = 0.5
+autostart = true
+
+[node name="SpawnTimer" type="Timer" parent="."]
+wait_time = 60.0
+autostart = true
+
+[node name="ScrollTimer" type="Timer" parent="."]
+wait_time = 0.35
+
+[node name="FailedToExitTimer" type="Timer" parent="."]
+
+[node name="ExitTimer" type="Timer" parent="."]
+
+[node name="TorchTimer" type="Timer" parent="."]
+autostart = true

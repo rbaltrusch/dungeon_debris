@@ -4,8 +4,14 @@ enum Tile {
 	EMPTY = 0,
 	WALL = 1,
 	DOOR = 2,
+	TORCH_WALL = 3,
+
 }
 
+func is_wall(tile: Tile):
+	return tile == Tile.WALL or tile == Tile.TORCH_WALL
+
+const TORCH_CHANCE = 0.05
 const loop_chance = 0.08
 var rng := RandomNumberGenerator.new()
 var NULL_ROOM := Rect2i(0, 0, 0, 0)
@@ -159,24 +165,32 @@ func _add_loops(map: Array, w: int, h: int, chance: float) -> void:
 # -------------------------------------------------
 
 func _add_doors(map: Array, w: int, h: int) -> void:
-	var exit_count = clamp((w * h) / 400, 1, 4)
+	var exit_count = clamp((w * h) / 200, 1, 4)
+	var min_coord = 5
 
 	for i in range(exit_count):
-		var side = rng.randi_range(0, 3)
+		var placed = false
+		while not placed:
+			var side = rng.randi_range(0, 3)
 
-		match side:
-			0: # top
-				var x = rng.randi_range(1, w - 2)
-				map[0][x] = Tile.DOOR
-			1: # bottom
-				var x = rng.randi_range(1, w - 2)
-				map[h - 1][x] = Tile.DOOR
-			2: # left
-				var y = rng.randi_range(1, h - 2)
-				map[y][0] = Tile.DOOR
-			3: # right
-				var y = rng.randi_range(1, h - 2)
-				map[y][w - 1] = Tile.DOOR
+			match side:
+				0: # top
+					var x = rng.randi_range(min_coord, w - 2)
+					if map[1][x] != Tile.EMPTY: continue
+					map[0][x] = Tile.DOOR
+				1: # bottom
+					var x = rng.randi_range(min_coord, w - 2)
+					if map[h - 2][x] != Tile.EMPTY: continue
+					map[h - 1][x] = Tile.DOOR
+				2: # left
+					var y = rng.randi_range(min_coord, h - 2)
+					if map[y][1] != Tile.EMPTY: continue
+					map[y][0] = Tile.DOOR
+				3: # right
+					var y = rng.randi_range(min_coord, h - 2)
+					if map[y][w - 2] != Tile.EMPTY: continue
+					map[y][w - 1] = Tile.DOOR
+			placed = true
 
 
 # -------------------------------------------------
@@ -186,7 +200,8 @@ func _create_filled_map(w: int, h: int) -> Array:
 	for y in range(h):
 		var row := []
 		for x in range(w):
-			row.append(Tile.WALL)
+			var wall = Tile.WALL if randf() > TORCH_CHANCE else Tile.TORCH_WALL  
+			row.append(wall)
 		map.append(row)
 	return map
 

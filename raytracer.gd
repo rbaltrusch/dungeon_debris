@@ -4,18 +4,30 @@ class_name RayTracer
 signal took_damage(damage)
 signal blocked_damage(damage)
 signal increased_block(block)
+signal reduced_block(block)
 signal dealt_damage(damage)
 signal failed_to_attack_due_to_no_weapon
 signal failed_to_block_due_to_missing_shield
 signal failed_to_attack_due_to_cooldown
 signal failed_to_block_due_to_cooldown
+signal failed_to_use_no_item_equipped
+signal failed_to_exit_dungeon_should_equip_key
+signal failed_to_exit_dungeon_no_key
+signal failed_to_exit_dungeon_no_door
 signal exitted_dungeon
 signal player_rooted
 signal player_died
+signal player_hp_updated(hp)
 signal enemy_killed(enemy)
+signal item_collected(item)
+signal item_used(item)
+signal player_healed(hp)
+signal equipped_left_hand_item(item)
+signal equipped_shield(shield)
 
 const Item = preload("res://item.gd")
 const ItemType = preload("res://item_type.gd").ItemType
+const ItemDescription = preload("res://item_type.gd").ItemDescription
 const Map = preload("res://map.gd")
 const MapGenerator = preload("res://map_generator.gd")
 const Enemy = preload("res://enemy.gd")
@@ -27,12 +39,16 @@ const GrubblerData = preload("res://grubbler.gd")
 const DungeonSignals = preload("res://dungeon_signals.gd")
 const Shield = preload("res://shield.gd")
 const Weapon = preload("res://weapon.gd")
+const Key = preload("res://key.gd")
 
 const SCREEN_WIDTH = Constants.SCREEN_WIDTH
 const SCREEN_HEIGHT = Constants.SCREEN_HEIGHT
 const FPS = Constants.FPS
 
+var fadeout = 0
+var exitting = false
 var exitted = false
+
 var map: Map
 var items: Array
 var shader: ShaderMaterial = self.material
@@ -49,36 +65,74 @@ var background_texture
 var enemies: Array[Enemy] = []
 var texture_renderer: TextureRenderer
 
+@onready var block_strip_timer = $BlockStripTimer
+@onready var spawn_timer = $SpawnTimer
+
+var can_exit = false
+var can_warn = true
+@onready var failed_to_exit_dungeon_timer = $FailedToExitTimer
+
+var can_scroll = true
+@onready var scroll_timer = $ScrollTimer
+
+@onready var exit_timer = $ExitTimer
+
+@onready var use_sword_sound = $UseSword
+
+@onready var torch_timer = $TorchTimer
+var torch_level = 70
+
+var strangeness = 0
+
 func _ready():
 	player = Player.new()
-	player.equip_shield(Shield.new(10, 5))
-	player.equip_weapon(Weapon.new(10, 2, 1.5))
-	add_child(player.shield)
-	add_child(player.weapon)
 	player.took_damage.connect($HitSound.play)
-	player.took_damage.connect(func(damage): took_damage.emit(damage))
-	player.blocked_damage.connect(func(damage): blocked_damage.emit(damage))
-	player.increased_block.connect(func(block): increased_block.emit(block))
+	player.took_damage.connect(took_damage.emit)
+	player.blocked_damage.connect(blocked_damage.emit)
+	player.blocked_full_damage.connect($BlockedAttack.play)
+	player.reduced_block.connect(reduced_block.emit)
+	player.increased_block.connect(increased_block.emit)
+	player.increased_block.connect($BlockIncreased.play)
 	player.failed_to_attack_due_to_cooldown.connect(failed_to_attack_due_to_cooldown.emit)
 	player.failed_to_attack_due_to_no_weapon.connect(failed_to_attack_due_to_no_weapon.emit)
 	player.failed_to_block_due_to_cooldown.connect(failed_to_block_due_to_cooldown.emit)
 	player.failed_to_block_due_to_missing_shield.connect(failed_to_block_due_to_missing_shield.emit)
+	player.failed_to_use_no_item_equipped.connect(failed_to_use_no_item_equipped.emit)
 	player.rooted.connect(player_rooted.emit)
 	player.died.connect(player_died.emit)
 	player.attacked.connect(process_player_attack)
+	player.attacked.connect(func(damage): use_sword_sound.play())
+	player.hp_updated.connect(player_hp_updated.emit)
+	player.healed.connect(player_healed.emit)
+	player.equipped_left_hand_item.connect(equipped_left_hand_item.emit)
+	player.equipped_shield.connect(equipped_shield.emit)
+	player.equipped_shield.connect(add_child)
+	player.picked_up_weapon.connect(add_child)
 	dealt_damage.connect(func(damage): player.set_attack_on_cooldown())
+	dealt_damage.connect(func(damage): use_sword_sound.play)
+	player.equip_shield.call_deferred(Shield.new(8, 3.5, ItemType.WOODEN_SHIELD))
+	player.pickup_left_hand_item.call_deferred(Weapon.new(10, 1, 2.5, ItemType.DAGGER))
+
+	exitted_dungeon.connect($DoorUnlock.play)
+
+	block_strip_timer.timeout.connect(func():
+		player.reduce_block(1)
+		if player.block > 0:
+			block_strip_timer.start()
+	)
+	player.increased_block.connect(func(block): block_strip_timer.start())
+	spawn_timer.timeout.connect(func(): spawn_enemy(create_grubbler()); spawn_timer.start())
+	scroll_timer.timeout.connect(func(): can_scroll = true)
+	failed_to_exit_dungeon_timer.timeout.connect(func(): can_warn = true)
+	torch_timer.timeout.connect(func():
+		increase_torch_level(-1)
+		torch_timer.start()
+		print("torch_level", torch_level)
+	)
 
 	texture_renderer = TextureRenderer.new(draw_strip_texture, player)
-
-	var grubbler_texture = load("res://sprites/grubbler.png")
-	var dagger_texture = load("res://sprites/dagger.png")
-	var grubbler_data = GrubblerData.new(grubbler_texture, dagger_texture)
-	grubbler_data.just_attacked.connect($SmallSlam.play)
-	grubbler_data.started_hunting.connect($GrubblerHunt.play)
-	grubbler_data.started_attack.connect($GrubblerHunt.stop)
-	grubbler_data.started_attack.connect($GrubblerAttack.play)
-	#grubbler_data.state = GrubblerData.State.HUNTING
-	spawn_enemy(Enemy.new(Vector2(1, 1), grubbler_data))
+	for i in 3:
+		spawn_enemy(create_grubbler())
 
 	var height = randi_range(10, 20)
 	var width = randi_range(10, 20)
@@ -87,35 +141,65 @@ func _ready():
 	map.debug_print()
 	rotate_player(player.determine_angle_looking_into_open_corridor(map))
 
-	var large_potion = Item.new(Vector2(3, 1.5), ItemType.LARGE_HEALTH_POTION)
+	var large_potion = Item.new(Vector2(3, 1.5), ItemType.LARGE_HEALTH_POTION, func(item): player.heal(50))
 	large_potion.was_collected.connect($PotionPickup.play)
-	var small_potion = Item.new(Vector2(5, 1.5), ItemType.SMALL_HEALTH_POTION)
+	large_potion.was_used.connect($UsePotion.play)
+	var small_potion = Item.new(Vector2(5, 1.5), ItemType.SMALL_HEALTH_POTION, func(item): player.heal(20))
 	small_potion.was_collected.connect($PotionPickup.play)
-	var key = Item.new(Vector2(6, 1.5), ItemType.KEY)
+	small_potion.was_used.connect($UsePotion.play)
+	var key = Key.new(Vector2(6, 1.5), ItemType.KEY, start_exit_dungeon)
 	key.was_collected.connect($KeyPickup.play)
-	items = [large_potion, small_potion, key]
+	key.tried_to_use.connect($KeyUse.play)
+	var torch = Item.new(Vector2(4, 1.5), ItemType.TORCH, func(item): increase_torch_level(25))
+	var items_ = [large_potion, small_potion, key, torch]
+	for item in items_:
+		spawn_item(item)
+
+	exit_timer.timeout.connect(exit_dungeon)
 
 	background_texture = load("res://sprites/background.png")
 	item_textures[ItemType.LARGE_HEALTH_POTION] = load("res://sprites/health_potion.png")
 	item_textures[ItemType.SMALL_HEALTH_POTION] = load("res://sprites/small_health_potion.png")
 	item_textures[ItemType.GOLD] = load("res://sprites/gold.png")
 	item_textures[ItemType.KEY] = load("res://sprites/key.png")
+	item_textures[ItemType.TORCH] = load("res://sprites/torch.png")
 
 	wall_textures[MapGenerator.Tile.WALL] = load("res://sprites/wall2.png")
 	wall_textures[MapGenerator.Tile.DOOR] = load("res://sprites/door.png")
+	wall_textures[MapGenerator.Tile.TORCH_WALL] = load("res://sprites/wall3.png")
+
+func create_grubbler() -> Enemy:
+	var grubbler_texture = load("res://sprites/grubbler.png")
+	var dagger_texture = load("res://sprites/dagger.png")
+	var grubbler_data = GrubblerData.new(grubbler_texture, dagger_texture)
+	grubbler_data.just_attacked.connect($SmallSlam.play)
+	grubbler_data.started_hunting.connect($GrubblerHunt.play)
+	grubbler_data.started_attack.connect($GrubblerHunt.stop)
+	grubbler_data.started_attack.connect($GrubblerAttack.play)
+	#grubbler_data.state = GrubblerData.State.HUNTING
+	return Enemy.new(Vector2(1, 1), grubbler_data)
 
 func spawn_enemy(enemy: Enemy) -> void:
 	enemies.append(enemy)
 	enemy.died.connect(func(): enemy_killed.emit(enemy))
 	enemy.died.connect($EnemyDeath.play)
-	enemy.took_damage.connect(func(damage): dealt_damage.emit(damage))
+	enemy.took_damage.connect(dealt_damage.emit)
+
+func spawn_item(item: Item) -> void:
+	items.append(item)
+	item.was_collected.connect(item_collected.emit)
+	item.was_collected.connect(player.pickup_left_hand_item)
+	item.was_used.connect(item_used.emit)
+
+func increase_torch_level(extra_torch: int):
+	torch_level = clamp(torch_level + extra_torch, 10, 100)
 
 func process_player_attack(damage: float):
 	print("processing player attack...")
 	var best_target: Enemy = null
 	var closest_distance = INF
 	var min_dot = cos(player.weapon.cone * 0.5)
-	
+
 	for enemy in enemies:
 		if not enemy.alive:
 			print("dead enemy")
@@ -133,9 +217,9 @@ func process_player_attack(damage: float):
 			print("out of cone")
 			continue
 
-		if not has_line_of_sight(enemy.position):
-			print("no line of sight to enemy")
-			continue
+		#if not has_line_of_sight(enemy.position):
+			#print("no line of sight to enemy")
+			#continue
 
 		if distance_square < closest_distance:
 			print("found target enemy")
@@ -145,26 +229,33 @@ func process_player_attack(damage: float):
 	if best_target:
 		best_target.take_damage(player.weapon.damage, DamageType.PHYSICAL)
 
-func has_line_of_sight(target_pos: Vector2) -> bool:
-	var ray_dir = (target_pos - player.position).normalized()
-	var distance = player.position.distance_to(target_pos)
-	
-	var check_pos = player.position
-	var step = ray_dir * 0.1
-	
-	var traveled = 0.0
-	while traveled < distance:
-		check_pos += step
-		traveled += 0.1
-		
-		if is_wall(check_pos.x, check_pos.y):
-			return false
-	
-	return true
+#func has_line_of_sight(target_pos: Vector2) -> bool:
+	#var ray_dir = (target_pos - player.position).normalized()
+	#var distance = player.position.distance_to(target_pos)
+	#
+	#var check_pos = player.position
+	#var step = ray_dir * 0.1
+	#
+	#var traveled = 0.0
+	#while traveled < distance:
+		#check_pos += step
+		#traveled += 0.1
+		#
+		#if is_wall(check_pos.x, check_pos.y):
+			#return false
+	#
+	#return true
 
 func _process(delta):
 	var time = 1.0 * Time.get_ticks_msec() / 1000
+	if exitting:
+		fadeout = clamp(fadeout + delta, 0, 1)
+	elif not player.alive:
+		fadeout = clamp(fadeout + delta / 2.5, 0, 1)  # slower fadeout
+
 	shader.set_shader_parameter("u_time", time)
+	shader.set_shader_parameter("u_fadeout_time", fadeout)
+	shader.set_shader_parameter("u_torch_level", (1.0 * torch_level) / 100)
 
 	var bob = 0.025 * sin(2 * PI * 0.35 * time)
 	item_bobbing = Vector2(bob, bob)
@@ -184,6 +275,7 @@ func _process(delta):
 		if sprite_pos.length() < COLLECTION_DISTANCE:
 			item.collect()
 	enemies = enemies.filter(func(x): return x.alive)
+	items = items.filter(func(x): return not x.used)
 	queue_redraw()
 
 
@@ -227,20 +319,41 @@ func handle_input(delta):
 		rotate_player(player.rot_speed * delta)
 
 	if Input.is_action_just_pressed("attack"):
-		player.attack()
+		player.use_left_hand_item()
 
 	if Input.is_action_just_pressed("block"):
 		player.use_shield()
+
+	if Input.is_action_just_pressed("item_scroll_up") and can_scroll:
+		lock_scroll()
+		player.equip_next_left_hand_item()
+
+	if Input.is_action_just_pressed("item_scroll_down") and can_scroll:
+		lock_scroll()
+		player.equip_previous_left_hand_item()
+
+func lock_scroll():
+	can_scroll = false
+	scroll_timer.start()
 
 func rotate_player(angle):
 	player.dir = player.dir.rotated(angle)
 	camera_plane = camera_plane.rotated(angle)
 
-func exit_dungeon():
-	if exitted:
+func start_exit_dungeon(item: Item):
+	if not can_exit:
+		failed_to_exit_dungeon_no_door.emit()
 		return
 
-	# TODO can only exit with key
+	if exitting:
+		return
+
+	exitting = true
+	exit_timer.start()
+	exitted_dungeon.emit()
+	item.was_used.emit(item)
+
+func exit_dungeon():
 	exitted = true
 	print("exitted")
 	queue_free()
@@ -250,7 +363,7 @@ func draw_strip_texture(sprite_pos: Vector2, texture: Texture2D, scale: float = 
 	scale = clamp(scale, 0, 1)
 	if scale == 0:
 		return Rect2()
-	var inverse_scale = 1 / scale
+	var inverse_scale = 1.0 / scale
 
 	var inv_det = 1.0 / (camera_plane.x * player.dir.y - player.dir.x * camera_plane.y)
 
@@ -367,8 +480,17 @@ func _draw():
 		if not texture_index: # empty
 			continue
 
-		if texture_index == MapGenerator.Tile.DOOR && perp_wall_dist < COLLECTION_DISTANCE:
-			exit_dungeon.call_deferred()
+		can_exit = false
+		var door_pos = map_pos - player.position
+		if texture_index == MapGenerator.Tile.DOOR and door_pos.length() < COLLECTION_DISTANCE * 4:
+			can_exit = true
+			var no_key_equipped = not player.left_hand_item or player.left_hand_item.type != ItemType.KEY
+			if can_warn and no_key_equipped:
+				can_warn = false
+				var has_key = player.left_hand_items.any(func(x): return x.type == ItemType.KEY)
+				var failure = failed_to_exit_dungeon_should_equip_key if has_key else failed_to_exit_dungeon_no_key
+				failure.emit()
+				failed_to_exit_dungeon_timer.start()
 
 		var tex = wall_textures[texture_index]
 		if not tex:
