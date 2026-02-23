@@ -1,14 +1,14 @@
 [gd_scene load_steps=11 format=3 uid="uid://cfgck6rbxq5kv"]
 
 [ext_resource type="Texture2D" uid="uid://becs3xoppkpwo" path="res://sprites/background.png" id="1_110uq"]
-[ext_resource type="PackedScene" uid="uid://2ty0lugv2qtk" path="res://dungeon.tscn" id="1_i2gdv"]
-[ext_resource type="Script" uid="uid://db1juelqgc5gf" path="res://particles.gd" id="2_0s83s"]
+[ext_resource type="PackedScene" uid="uid://2ty0lugv2qtk" path="res://scenes/dungeon.tscn" id="1_i2gdv"]
+[ext_resource type="Script" uid="uid://db1juelqgc5gf" path="res://scripts/particles.gd" id="2_0s83s"]
 [ext_resource type="FontFile" uid="uid://dtgx4myisium" path="res://fonts/Tiny5-Regular.ttf" id="3_71hro"]
-[ext_resource type="Script" uid="uid://c4qvm7jee3m26" path="res://block_label.gd" id="3_aoaqw"]
-[ext_resource type="Script" uid="uid://dt86aemc682x0" path="res://hp_label.gd" id="4_4lude"]
-[ext_resource type="Script" uid="uid://8egc30bt42v4" path="res://left_hand_label.gd" id="6_dxow3"]
-[ext_resource type="Script" uid="uid://h7ougbpgbs6d" path="res://right_hand_label.gd" id="7_fwttx"]
-[ext_resource type="Script" uid="uid://cu4pim835k8bd" path="res://strangeness_label.gd" id="7_jl4cv"]
+[ext_resource type="Script" uid="uid://c4qvm7jee3m26" path="res://scripts/block_label.gd" id="3_aoaqw"]
+[ext_resource type="Script" uid="uid://dt86aemc682x0" path="res://scripts/hp_label.gd" id="4_4lude"]
+[ext_resource type="Script" uid="uid://8egc30bt42v4" path="res://scripts/left_hand_label.gd" id="6_dxow3"]
+[ext_resource type="Script" uid="uid://h7ougbpgbs6d" path="res://scripts/right_hand_label.gd" id="7_fwttx"]
+[ext_resource type="Script" uid="uid://cu4pim835k8bd" path="res://scripts/strangeness_label.gd" id="7_jl4cv"]
 
 [sub_resource type="ViewportTexture" id="ViewportTexture_0s83s"]
 viewport_path = NodePath("SubViewport")

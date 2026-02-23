@@ -9,7 +9,7 @@ var position
 var type
 var use_fn: Callable
 
-const ItemType = preload("res://item_type.gd")
+const ItemType = preload("res://scripts/item_type.gd")
 
 func _init(position: Vector2, type: ItemType.ItemType, use_fn: Callable = func(item): null) -> void:
 	self.position = position

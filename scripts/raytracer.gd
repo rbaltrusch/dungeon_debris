@@ -28,23 +28,23 @@ signal full_strangeness_reached
 signal increased_strangeness(strangeness)
 signal asked_to_display_help
 
-const Item = preload("res://item.gd")
-const ItemType = preload("res://item_type.gd").ItemType
-const ItemDescription = preload("res://item_type.gd").ItemDescription
-const Map = preload("res://map.gd")
-const MapGenerator = preload("res://map_generator.gd")
-const Enemy = preload("res://enemy.gd")
-const Player = preload("res://player.gd")
-const TextureRenderer = preload("res://texture_renderer.gd")
-const DamageType = preload("res://damage_type.gd").DamageType
-const Constants = preload("res://consts.gd")
-const GrubblerData = preload("res://grubbler.gd")
-const ZombieData = preload("res://zombie.gd")
-const DungeonSignals = preload("res://dungeon_signals.gd")
-const Shield = preload("res://shield.gd")
-const Weapon = preload("res://weapon.gd")
-const Key = preload("res://key.gd")
-const PathFinder = preload("res://pathfinder.gd")
+const Item = preload("res://scripts/item.gd")
+const ItemType = preload("res://scripts/item_type.gd").ItemType
+const ItemDescription = preload("res://scripts/item_type.gd").ItemDescription
+const Map = preload("res://scripts/map.gd")
+const MapGenerator = preload("res://scripts/map_generator.gd")
+const Enemy = preload("res://scripts/enemy.gd")
+const Player = preload("res://scripts/player.gd")
+const TextureRenderer = preload("res://scripts/texture_renderer.gd")
+const DamageType = preload("res://scripts/damage_type.gd").DamageType
+const Constants = preload("res://scripts/consts.gd")
+const GrubblerData = preload("res://scripts/grubbler.gd")
+const ZombieData = preload("res://scripts/zombie.gd")
+const DungeonSignals = preload("res://scripts/dungeon_signals.gd")
+const Shield = preload("res://scripts/shield.gd")
+const Weapon = preload("res://scripts/weapon.gd")
+const Key = preload("res://scripts/key.gd")
+const PathFinder = preload("res://scripts/pathfinder.gd")
 
 const FPS = Constants.FPS
 

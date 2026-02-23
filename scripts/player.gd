@@ -19,11 +19,11 @@ signal equipped_left_hand_item(item)
 signal equipped_shield(item)
 signal picked_up_weapon(item)
 
-const DamageType = preload("res://damage_type.gd").DamageType
-const Map = preload("res://map.gd")
-const MapGenerator = preload("res://map_generator.gd")
-const Weapon = preload("res://weapon.gd")
-const Shield = preload("res://shield.gd")
+const DamageType = preload("res://scripts/damage_type.gd").DamageType
+const Map = preload("res://scripts/map.gd")
+const MapGenerator = preload("res://scripts/map_generator.gd")
+const Weapon = preload("res://scripts/weapon.gd")
+const Shield = preload("res://scripts/shield.gd")
 
 const radius = 0.25
 var position = Vector2(1.5, 1.5)

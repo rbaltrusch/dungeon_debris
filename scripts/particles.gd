@@ -1,8 +1,8 @@
 extends CanvasLayer
 
-const Dungeon = preload("res://dungeon.tscn")
-const Consts = preload("res://consts.gd")
-const Item = preload("res://item.gd")
+const Dungeon = preload("res://scenes/dungeon.tscn")
+const Consts = preload("res://scripts/consts.gd")
+const Item = preload("res://scripts/item.gd")
 
 const TOP_LEFT = Vector2(150, 150)
 var TOP_RIGHT = Vector2(Consts.get_screen_width() - 300, 150)

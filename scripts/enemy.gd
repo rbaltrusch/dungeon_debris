@@ -1,9 +1,9 @@
 class_name Enemy
 
-const Player = preload("res://player.gd")
-const Map = preload("res://map.gd")
-const TextureRenderer = preload("res://texture_renderer.gd")
-const DamageType = preload("res://damage_type.gd").DamageType
+const Player = preload("res://scripts/player.gd")
+const Map = preload("res://scripts/map.gd")
+const TextureRenderer = preload("res://scripts/texture_renderer.gd")
+const DamageType = preload("res://scripts/damage_type.gd").DamageType
 
 signal took_damage(damage)
 signal died

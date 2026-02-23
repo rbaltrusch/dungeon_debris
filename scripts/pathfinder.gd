@@ -1,7 +1,7 @@
 extends RefCounted
 
-const Map = preload("res://map.gd")
-const MapGenerator = preload("res://map_generator.gd")
+const Map = preload("res://scripts/map.gd")
+const MapGenerator = preload("res://scripts/map_generator.gd")
 
 var astar = AStarGrid2D.new()
 

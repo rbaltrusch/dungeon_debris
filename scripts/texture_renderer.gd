@@ -1,6 +1,6 @@
 class_name TextureRenderer
 
-const Player = preload("res://player.gd")
+const Player = preload("res://scripts/player.gd")
 
 # takes params texture: Vector2, Texture2D, float, returns Rect2
 var render_fn: Callable

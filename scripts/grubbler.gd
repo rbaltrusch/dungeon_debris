@@ -1,9 +1,9 @@
 # teleports behind you
 extends Enemy.EnemyData
 
-const MapGenerator = preload("res://map_generator.gd")
-const DamageType = preload("res://damage_type.gd").DamageType
-const Constants = preload("res://consts.gd")
+const MapGenerator = preload("res://scripts/map_generator.gd")
+const DamageType = preload("res://scripts/damage_type.gd").DamageType
+const Constants = preload("res://scripts/consts.gd")
 
 const FPS = Constants.FPS
 

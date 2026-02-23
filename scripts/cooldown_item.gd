@@ -1,7 +1,7 @@
 class_name CooldownItem
 extends Node
 
-const ItemType = preload("res://item_type.gd")
+const ItemType = preload("res://scripts/item_type.gd")
 
 signal cooldown_refreshed
 
