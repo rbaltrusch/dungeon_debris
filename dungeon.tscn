@@ -120,6 +120,7 @@ stream = ExtResource("22_5grt3")
 
 [node name="StrangeDebrisPickup" type="AudioStreamPlayer" parent="."]
 stream = SubResource("AudioStreamRandomizer_ynsks")
+max_polyphony = 2
 
 [node name="Win" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("26_0luh7")

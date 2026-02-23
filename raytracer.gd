@@ -46,8 +46,6 @@ const Weapon = preload("res://weapon.gd")
 const Key = preload("res://key.gd")
 const PathFinder = preload("res://pathfinder.gd")
 
-const SCREEN_WIDTH = Constants.SCREEN_WIDTH
-const SCREEN_HEIGHT = Constants.SCREEN_HEIGHT
 const FPS = Constants.FPS
 
 var fadeout = 0
@@ -95,6 +93,11 @@ var strangeness = 0
 const FULL_STRANGENESS = 50
 var dungeon_number = 1
 var min_dungeon_size = 5
+var won = false
+
+var fullscreened = DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
+
+# FIXME: items and enemies are never cleared after dungeon re-generation
 
 func _ready():
 	player = Player.new()
@@ -279,7 +282,8 @@ func increase_strangeness(extra_strangeness: int) -> void:
 	if not extra_strangeness:
 		return
 	strangeness += extra_strangeness
-	if strangeness >= FULL_STRANGENESS:
+	if not won and strangeness >= FULL_STRANGENESS:
+		won = true
 		full_strangeness_reached.emit()
 	increased_strangeness.emit(extra_strangeness)
 
@@ -404,6 +408,14 @@ func try_to_move_to(velocity: Vector2):
 		player.position.y = new_pos.y
 
 func handle_input(delta):
+	if Input.is_action_just_pressed("ui_cancel"):
+		get_tree().quit()
+
+	if Input.is_action_just_pressed("fullscreen_toggle"):
+		fullscreened = not fullscreened
+		var mode = DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreened else DisplayServer.WINDOW_MODE_WINDOWED
+		DisplayServer.window_set_mode(mode)
+
 	if not player.alive:
 		if Input.is_action_just_pressed("restart"):
 			get_tree().reload_current_scene()
@@ -473,6 +485,9 @@ func exit_dungeon():
 
 # returns the rect of actual screen coordinates drawn
 func draw_strip_texture(sprite_pos: Vector2, texture: Texture2D, scale: float = 1.0) -> Rect2:
+	var screen_height = Constants.get_screen_height()
+	var screen_width = Constants.get_screen_width()
+
 	scale = clamp(scale, 0, 1)
 	if scale == 0:
 		return Rect2()
@@ -486,12 +501,12 @@ func draw_strip_texture(sprite_pos: Vector2, texture: Texture2D, scale: float = 
 	if transform_y <= 0:
 		return Rect2()
 
-	var sprite_screen_x = int((SCREEN_WIDTH / 2) * (1 + transform_x / transform_y))
-	var sprite_height = abs(int(SCREEN_HEIGHT / transform_y))
+	var sprite_screen_x = int((screen_width / 2) * (1 + transform_x / transform_y))
+	var sprite_height = abs(int(screen_height / transform_y))
 	var sprite_width = sprite_height
 
-	var draw_start_y = -sprite_height / 2 + SCREEN_HEIGHT / 2
-	var draw_end_y = sprite_height / 2 + SCREEN_HEIGHT / 2
+	var draw_start_y = -sprite_height / 2 + screen_height / 2
+	var draw_end_y = sprite_height / 2 + screen_height / 2
 
 	var draw_start_x = -sprite_width / 2 + sprite_screen_x
 	var draw_end_x = sprite_width / 2 + sprite_screen_x
@@ -500,7 +515,7 @@ func draw_strip_texture(sprite_pos: Vector2, texture: Texture2D, scale: float = 
 	var tex_height = texture.get_height()
 
 	for stripe in range(draw_start_x, draw_end_x):
-		if stripe < 0 or stripe >= SCREEN_WIDTH:
+		if stripe < 0 or stripe >= screen_width:
 			continue
 		if transform_y >= z_buffer[stripe]:
 			continue  # Behind wall
@@ -515,16 +530,19 @@ func draw_strip_texture(sprite_pos: Vector2, texture: Texture2D, scale: float = 
 	return Rect2(draw_start_x, draw_start_y, sprite_height, sprite_width)
 
 func _draw():
+	var screen_height = Constants.get_screen_height()
+	var screen_width = Constants.get_screen_width()
+
 	# Ceiling
-	#draw_rect(Rect2(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT / 2), Color(0.1, 0.1, 0.1, 0.2))
-	draw_texture(background_texture, Vector2.ZERO, Color(0.3, 0.3, 0.3, 1))
+	#draw_rect(Rect2(0, 0, screen_width, screen_height / 2), Color(0.1, 0.1, 0.1, 0.2))
+	draw_texture_rect(background_texture, Rect2(Vector2.ZERO, Vector2(screen_width, screen_height / 2)), false, Color(0.3, 0.3, 0.3, 1))
 
 	# Floor
-	draw_rect(Rect2(0, SCREEN_HEIGHT / 2, SCREEN_WIDTH, SCREEN_HEIGHT / 2), Color("#1a0f14"))
+	draw_rect(Rect2(0, screen_height / 2, screen_width, screen_height / 2), Color("#1a0f14"))
 
-	z_buffer.resize(SCREEN_WIDTH)
-	for x in SCREEN_WIDTH:
-		var camera_x = 2 * x / float(SCREEN_WIDTH) - 1
+	z_buffer.resize(screen_width)
+	for x in screen_width:
+		var camera_x = 2 * x / float(screen_width) - 1
 		var ray_dir = player.dir + camera_plane * camera_x
 
 		var map_pos = Vector2(int(player.position.x), int(player.position.y))
@@ -620,10 +638,10 @@ func _draw():
 		if side == 1 and ray_dir.y < 0:
 			tex_x = tex_width - tex_x - 1
 
-		var line_height = int(SCREEN_HEIGHT / perp_wall_dist)
+		var line_height = int(screen_height / perp_wall_dist)
 
-		var draw_start = -line_height / 2 + SCREEN_HEIGHT / 2
-		var draw_end = line_height / 2 + SCREEN_HEIGHT / 2
+		var draw_start = -line_height / 2 + screen_height / 2
+		var draw_end = line_height / 2 + screen_height / 2
 		var color = Color("#40242f")
 		var modulator_color = Color(color * 0.5, 1) if side == 1 else color
 

@@ -46,10 +46,11 @@ var left_hand_items: Array[Variant] = []
 var current_left_hand_item_index = 0
 
 func determine_angle_looking_into_open_corridor(map: Map) -> float:
+	var angle_to_start_direction = dir.angle_to(Vector2(1, 0))
 	var next_tile: Vector2 = position.floor() + dir.normalized()
 	if map.get_tile(next_tile) != MapGenerator.Tile.EMPTY:
-		return PI / 2
-	return 0
+		return angle_to_start_direction + PI / 2
+	return angle_to_start_direction
 
 func heal(amount: float) -> void:
 	var old_hp = hp

@@ -1,13 +1,7 @@
 # walks to you
 extends Enemy.EnemyData
 
-const Constants = preload("res://consts.gd")
-
 signal just_attacked
-
-const SCREEN_WIDTH = Constants.SCREEN_WIDTH
-const SCREEN_HEIGHT = Constants.SCREEN_HEIGHT
-const FPS = Constants.FPS
 
 enum State {WALKING, ATTACK}
 

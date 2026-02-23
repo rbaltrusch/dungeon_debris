@@ -5,8 +5,8 @@ const Consts = preload("res://consts.gd")
 const Item = preload("res://item.gd")
 
 const TOP_LEFT = Vector2(150, 150)
-const TOP_RIGHT = Vector2(Consts.SCREEN_WIDTH - 300, 150)
-const MIDDLE = Vector2(Consts.SCREEN_WIDTH / 2, Consts.SCREEN_HEIGHT * 2 / 3)
+var TOP_RIGHT = Vector2(Consts.get_screen_width() - 300, 150)
+var MIDDLE = Vector2(Consts.get_screen_width() / 2, Consts.get_screen_height() * 2 / 3)
 const OFFSET = Vector2(0, 10)
 
 @onready var font = preload("res://fonts/Tiny5-Regular.ttf")

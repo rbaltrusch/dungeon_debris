@@ -1,5 +1,6 @@
-[gd_scene load_steps=10 format=3 uid="uid://cfgck6rbxq5kv"]
+[gd_scene load_steps=11 format=3 uid="uid://cfgck6rbxq5kv"]
 
+[ext_resource type="Texture2D" uid="uid://becs3xoppkpwo" path="res://sprites/background.png" id="1_110uq"]
 [ext_resource type="PackedScene" uid="uid://2ty0lugv2qtk" path="res://dungeon.tscn" id="1_i2gdv"]
 [ext_resource type="Script" uid="uid://db1juelqgc5gf" path="res://particles.gd" id="2_0s83s"]
 [ext_resource type="FontFile" uid="uid://dtgx4myisium" path="res://fonts/Tiny5-Regular.ttf" id="3_71hro"]
@@ -12,18 +13,34 @@
 [sub_resource type="ViewportTexture" id="ViewportTexture_0s83s"]
 viewport_path = NodePath("SubViewport")
 
-[node name="DungeonWrapper" type="Node2D"]
+[node name="DungeonWrapper" type="SubViewportContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+stretch = true
+
+[node name="Background" type="TextureRect" parent="."]
+visible = false
+z_index = -1
+layout_mode = 2
+texture = ExtResource("1_110uq")
+expand_mode = 2
 
 [node name="SubViewport" type="SubViewport" parent="."]
 disable_3d = true
+handle_input_locally = false
 size = Vector2i(1152, 648)
 render_target_update_mode = 4
 
 [node name="Dungeon" parent="SubViewport" instance=ExtResource("1_i2gdv")]
 
 [node name="TextureRect" type="TextureRect" parent="."]
-offset_right = 40.0
-offset_bottom = 40.0
+layout_mode = 2
+mouse_filter = 2
 texture = SubResource("ViewportTexture_0s83s")
 
 [node name="TextMessages" type="CanvasLayer" parent="."]

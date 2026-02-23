@@ -5,8 +5,6 @@ const MapGenerator = preload("res://map_generator.gd")
 const DamageType = preload("res://damage_type.gd").DamageType
 const Constants = preload("res://consts.gd")
 
-const SCREEN_WIDTH = Constants.SCREEN_WIDTH
-const SCREEN_HEIGHT = Constants.SCREEN_HEIGHT
 const FPS = Constants.FPS
 
 signal released_locked_in_place
