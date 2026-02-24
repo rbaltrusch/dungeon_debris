@@ -1,0 +1,51 @@
+display enemy block
+display enemy attack damage on loadup
+
+item spawns
+player inventory
+add different weapons
+add different shields
+add weapon/shield effects
+
+poison, bleed
+
+texture floors and ceiling
+
+main menu
+hub
+
+hurt shader
+die shader
+
+strangeness meter
+
+player walk sounds
+
+
+hp regen
+hp leech
+sanguine blade
+armour item
+
+kinda:
+    enemy spawns
+    add other enemies
+    game over
+
+later:
+    fix shield text placement
+    improve:
+        slash sound
+        increase block sound
+    display block number
+    display shield
+    display block
+    exit door with key
+
+=============== done
+solve rooting issue
+use key sound
+exit dungeon sound
+use potion sound
+display player block
+fix door gen
