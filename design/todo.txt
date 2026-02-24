@@ -49,3 +49,31 @@ exit dungeon sound
 use potion sound
 display player block
 fix door gen
+
+================== ideas
+strangeness meter
+darkness meter (shader)
+scavenge for items in dungeon rooms
+can randomly lose some gathered items (chance)
+items can be stolen by enemies
+items can lose durability
+items can 
+keys to enter some rooms (or lose hp)
+limited inventory space
+
+encounter monsters while scavenging for items and cards
+monsters may drop loot
+monsters may steal loot
+player can escape from fight with a chance to lose some items
+at 100% strangeness, boss appears
+
+gathered effects
+    drunk (vertigo) effect (shader)
+    see red, green or yellow (shader)
+    tunnel vision shader
+    opposite tunnel vision shader (only peripheral vision, blurry center)
+    gain large inventory space but random chance to lose items
+
+real-time deck builder with draw speed and energy gen speed
+
+consumables can expire or have limited durability
